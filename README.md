@@ -1,95 +1,42 @@
 # 🤖 SYDRA — Smart Control Center
 
-SYDRA is a fullscreen desktop AI assistant built with `pygame`, featuring a live
-animated "Saturn" orb visualizer, a chat interface, Turkish voice input/output
-(via `SpeechRecognition` + `edge-tts`), and hardware controls tailored for
-ASUS laptops on Linux (keyboard RGB, brightness, fan speed, CPU temperature,
-power profiles).
+SYDRA is a fullscreen desktop AI assistant built with `pygame`, featuring a live animated "Saturn" particle orb visualizer, a interactive chat interface, English voice input/output (via `SpeechRecognition` + `edge-tts`), multilingual text response capabilities, real-time web search capabilities, and hardware controls tailored for ASUS laptops on Linux (keyboard RGB, brightness, fan speed, CPU temperature, power profiles).
 
-It uses a hybrid AI backend: it first tries the [Groq](https://groq.com) cloud
-API (Llama 3.3 70B) and falls back to a local [Ollama](https://ollama.ai)
-model (Mistral by default) if the cloud call fails or no API key is set.
+It uses a hybrid AI backend: it first tries the [Groq](https://groq.com) cloud API (Llama 3.3 70B) for ultra-fast responses and gracefully falls back to a local [Ollama](https://ollama.ai) model (`qwen2.5:1.5b` by default) if the cloud call fails or no API key is provided.
 
-> **Note:** SYDRA's assistant persona and voice responses are in **Turkish**
-> (`Adın SYDRA...` system prompt, `tr-TR` speech recognition/TTS voices). The
-> code and comments have been kept bilingual — feel free to fork and adapt the
-> prompt/voice locale to your own language.
+---
 
-## Features
+## 🌟 Key Features
 
-- 🎙️ Turkish voice wake-word listening ("Sydra" / "Asus") with follow-up
-  voice commands
-- 💬 Text chat with persistent history (`chat_history.json`)
-- ⌨️ ASUS keyboard RGB control (color names, hex codes, brightness levels),
-  with an OpenRGB fallback for non-ASUS setups
-- 🔋 Power profile switching (performance / balanced / power-saver)
-- 🌡️ CPU temperature and fan RPM readouts (Linux `sysfs`/`hwmon`)
-- 🌤️ Weather lookups (`wttr.in`) and lightweight web search fallback
-- 🌌 Animated particle "Saturn orb" visualizer that reacts to conversation
-  state
+- 🎙️ **English Voice Wake-word:** Hands-free listening ("Sydra" / "Asus") with follow-up voice command processing (`en-US` speech recognition & `edge-tts`).
+- 💬 **Multilingual Text Chat:** Persistent chat history (`chat_history.json`) with an AI engine that automatically responds in the exact language of your prompt.
+- 🌐 **Real-Time Web & Weather Integration:** Append a `?` to any message or use keywords (`search`, `google`, `find`, `weather`) to fetch real-time web results from DuckDuckGo and live weather reports from `wttr.in`.
+- 🔄 **Dynamic Model Switching:** Switch local Ollama models on the fly directly inside the chat bar using the `/model <model_name>` command.
+- ⌨️ **ASUS Hardware & RGB Control:** Native Linux controls for keyboard RGB lighting (colors, hex codes, brightness), with an OpenRGB fallback for non-ASUS setups.
+- 🔋 **Power Profile Management:** Toggle system power profiles (`performance`, `balanced`, `power-saver`).
+- 🌡️ **Hardware Monitoring:** Read real-time CPU temperatures and active fan speeds (RPM) via Linux `sysfs`/`hwmon`.
+- 🌌 **Reactive Particle Visualizer:** Interactive "Saturn orb" particle animation that reacts dynamically when SYDRA is thinking or talking.
 
-## Requirements
+---
 
-- Linux (the hardware controls use Linux-specific paths — `sysfs`,
-  `hwmon`, `powerprofilesctl`, `brightnessctl`, ASUS `asus-nb-wmi`
-  driver). It will still run on other platforms, but hardware/keyboard
-  features will silently no-op.
-- Python 3.10+
-- A [Groq API key](https://console.groq.com/keys) (free tier available), and/or
-  a local [Ollama](https://ollama.ai) install with a pulled model, as fallback
+## 🔑 1. How to Get a Free Groq API Key
 
-## Setup
+Groq provides extremely fast cloud inference (Llama 3.3 70B) with a generous free tier.
 
+1. Go to [https://console.groq.com/keys](https://console.groq.com/keys).
+2. Sign in with your Google or GitHub account.
+3. Click **"Create API Key"**.
+4. Give your key a name (e.g., `sydra-key`) and click **"Create API Key"**.
+5. Copy the key (it starts with `gsk_...`).
+6. Paste it into your `.env` file under `GROQ_API_KEY`.
+
+---
+
+## 🦙 2. How to Install & Configure Ollama (Local LLM)
+
+Ollama runs open-source models locally on your system. It works seamlessly as SYDRA's offline fallback engine.
+
+### Step A: Install Ollama on Linux
+Open your terminal and run:
 ```bash
-git clone https://github.com/<your-username>/sydra.git
-cd sydra
-
-python3 -m venv venv
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-cp .env.example .env
-# then edit .env and add your GROQ_API_KEY
-```
-
-Run it:
-
-```bash
-python sydra_app.py
-```
-
-## Keybindings
-
-| Key     | Action                                  |
-|---------|------------------------------------------|
-| `Enter` | Send typed message                        |
-| `F1`    | Toggle voice wake-word listening          |
-| `F3`    | Cancel current speech/response            |
-| `F5`    | Clear chat history                        |
-| Scroll  | Scroll chat history                       |
-
-## Configuration
-
-All secrets and tunables are read from environment variables (see
-`.env.example`):
-
-| Variable             | Default                              | Description                    |
-|----------------------|---------------------------------------|---------------------------------|
-| `GROQ_API_KEY`       | *(empty)*                             | Groq cloud API key              |
-| `OLLAMA_URL`         | `http://localhost:11434/api/chat`     | Local Ollama endpoint           |
-| `OLLAMA_MODEL`       | `mistral`                             | Local fallback model name       |
-| `SYDRA_DEFAULT_CITY` | `Afyon`                               | Default city for weather lookup |
-
-## Notes on ASUS hardware controls
-
-Keyboard RGB and brightness control write to
-`/sys/devices/platform/asus-nb-wmi/leds/asus::kbd_backlight`. On non-ASUS
-hardware, or if that path isn't present, SYDRA falls back to `openrgb` if
-installed, then gives up gracefully. Some actions (`powerprofilesctl`,
-writing to `sysfs`) may prompt for a `pkexec` password depending on your
-system's polkit rules.
-
-## License
-
-MIT — see [LICENSE](LICENSE).
+curl -fsSL [https://ollama.com/install.sh](https://ollama.com/install.sh) | sh
