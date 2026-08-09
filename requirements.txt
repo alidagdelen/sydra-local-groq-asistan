@@ -1,0 +1,10 @@
+requests
+edge-tts
+pygame
+SpeechRecognition
+python-dotenv
+
+# Optional, only needed for microphone input via SpeechRecognition.
+# Requires the system "portaudio" dev package on Linux
+# (e.g. `sudo apt install portaudio19-dev` on Debian/Ubuntu) before it will build.
+PyAudio
