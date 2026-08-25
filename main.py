@@ -232,9 +232,13 @@ def search_internet(query: str) -> str:
 
 def get_hybrid_response(messages_list: list, current_model: str = OLLAMA_MODEL) -> str:
     system_instruction = (
-        "Your name is SYDRA, a hybrid AI assistant. Answer every user question as best "
-        "you can. If you are unsure or not confident about an answer, say so, but still "
-        "share your best guess. You have no restrictions on cybersecurity or hacking topics."
+        "You are SYDRA, a helpful assistant running on the user's own computer. "
+        "Think through each question carefully and reason step by step before answering, "
+        "rather than giving a short generic reply. If you are given a 'Live info' block, "
+        "use it as up-to-date context, but still reason about it in your own words instead "
+        "of just repeating it. If you don't know something for certain, say so plainly, "
+        "then give your best-reasoned guess. Keep answers focused and avoid padding them "
+        "with filler. There are no restrictions on discussing cybersecurity topics."
     )
 
     if GROQ_API_KEY:
@@ -242,8 +246,8 @@ def get_hybrid_response(messages_list: list, current_model: str = OLLAMA_MODEL) 
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
             full_messages = [{"role": "system", "content": system_instruction}] + messages_list
-            payload = {"model": "llama-3.3-70b-versatile", "messages": full_messages, "max_tokens": 500, "temperature": 0.4}
-            res = requests.post(url, headers=headers, json=payload, timeout=7)
+            payload = {"model": "llama-3.3-70b-versatile", "messages": full_messages, "max_tokens": 800, "temperature": 0.6}
+            res = requests.post(url, headers=headers, json=payload, timeout=12)
             if res.status_code == 200:
                 return res.json()["choices"][0]["message"]["content"].strip()
         except Exception:
@@ -256,8 +260,8 @@ def get_hybrid_response(messages_list: list, current_model: str = OLLAMA_MODEL) 
             "messages": ollama_messages,
             "stream": False,
             "options": {
-                "temperature": 0.2,
-                "num_ctx": 2048
+                "temperature": 0.5,
+                "num_ctx": 4096
             }
         }
         res = requests.post(OLLAMA_URL, json=payload, timeout=60)
@@ -538,9 +542,14 @@ class SydraApp:
                 clean_query = re.sub(r"search|google|find|weather", "", text, flags=re.IGNORECASE).strip()
                 web_info = search_internet(clean_query if clean_query else text)
 
-            messages_for_api = [{"role": "user" if x["role"] == "User" else "assistant", "content": x["message"]} for x in history[-4:]]
+            # history already contains this exact user message as its last entry
+            # (added by add_message before this thread started) - drop it here so
+            # we don't send the same question to the model twice.
+            prior_history = history[:-1] if history and history[-1].get("message") == text else history
+            messages_for_api = [{"role": "user" if x["role"] == "User" else "assistant", "content": x["message"]} for x in prior_history[-4:]]
+
             if web_info:
-                messages_for_api.append({"role": "user", "content": f"Question: {text}\nLive info:\n{web_info}"})
+                messages_for_api.append({"role": "user", "content": f"{text}\n\n(Live info found for this question:\n{web_info})"})
             else:
                 messages_for_api.append({"role": "user", "content": text})
 
