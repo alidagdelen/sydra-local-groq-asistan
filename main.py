@@ -34,11 +34,13 @@ pygame.init()
 # --------------------------------------------------------------------------
 # CONFIG & API KEYS
 # --------------------------------------------------------------------------
+# The user provides their own key via a .env file or environment variable:
+#   GROQ_API_KEY=your_key_here
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
-# RTX 4050 ve hızlı yanıtlar için varsayılan hafif ama güçlü model:
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b") 
-DEFAULT_CITY = os.getenv("SYDRA_DEFAULT_CITY", "London")
+# Lightweight but capable default model, good for fast responses on an RTX 4050:
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
+DEFAULT_CITY = os.getenv("SYDRA_DEFAULT_CITY", "Afyonkarahisar")
 HISTORY_FILE = "chat_history.json"
 
 # --------------------------------------------------------------------------
@@ -104,9 +106,9 @@ def performance_mode(active: bool) -> str:
     profile = "performance" if active else "balanced"
     try:
         subprocess.run(f"pkexec powerprofilesctl set {profile}", shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        return f"Performance Mode {'Enabled' if active else 'Disabled'}!"
+        return f"Performance Mode {'Activated' if active else 'Deactivated'}!"
     except Exception:
-        return "Could not change performance mode."
+        return "Could not switch performance mode."
 
 def power_saver_mode(active: bool) -> str:
     profile = "power-saver" if active else "balanced"
@@ -118,11 +120,11 @@ def power_saver_mode(active: bool) -> str:
     if active:
         KeyboardControl.set_brightness(0)
         set_screen_brightness(20)
-        return "Maximum Power Saver Enabled!"
+        return "Maximum Power Saving Active!"
     else:
         KeyboardControl.set_brightness(2)
         set_screen_brightness(70)
-        return "Power Saver Disabled."
+        return "Power Saving Disabled."
 
 class KeyboardControl:
     LAST_HEX = ""
@@ -150,8 +152,8 @@ class KeyboardControl:
         level = max(0, min(3, level))
         if os.path.isdir(ASUS_KBD_ROOT):
             _write_sysfs(f"{ASUS_KBD_ROOT}/brightness", f"{level}\n")
-            return f"Keyboard brightness set to {level}."
-        return f"Brightness adjusted to level {level}."
+            return f"Keyboard brightness set to level {level}."
+        return f"Brightness set to level {level}."
 
 def read_cpu_temperature() -> str:
     for zone in sorted(glob.glob("/sys/class/thermal/thermal_zone*/type")):
@@ -160,8 +162,9 @@ def read_cpu_temperature() -> str:
                 if any(x in fh.read().strip().lower() for x in ["cpu", "x86_pkg_temp", "soc"]):
                     with open(zone.replace("/type", "/temp")) as tfh:
                         temp = int(tfh.read().strip()) / 1000
-                        return f"CPU Temperature: {temp:.1f}C"
-        except Exception: continue
+                        return f"CPU Temperature: {temp:.1f}°C"
+        except Exception:
+            continue
     return "Could not read CPU temperature."
 
 def read_fan_rpm() -> str:
@@ -170,11 +173,13 @@ def read_fan_rpm() -> str:
         try:
             with open(fan_input) as fh:
                 val = fh.read().strip()
-                if val.isdigit(): speeds.append(int(val))
-        except Exception: continue
+                if val.isdigit():
+                    speeds.append(int(val))
+        except Exception:
+            continue
     if speeds:
         return "Fan Speeds: " + ", ".join([f"Fan {i+1}: {rpm} RPM" for i, rpm in enumerate(speeds)])
-    return "Active fan RPM sensor could not be read."
+    return "No active fan RPM sensor could be read."
 
 COLOR_DICTIONARY = {
     "blue": (0, 0, 255), "light blue": (173, 216, 230), "dark blue": (0, 0, 139),
@@ -182,9 +187,6 @@ COLOR_DICTIONARY = {
     "green": (0, 255, 0), "light green": (144, 238, 144), "red": (255, 0, 0),
     "orange": (255, 165, 0), "yellow": (255, 255, 0), "purple": (128, 0, 128),
     "pink": (255, 192, 203), "white": (255, 255, 255), "gray": (128, 128, 128),
-    "mavi": (0, 0, 255), "kırmızı": (255, 0, 0), "yeşil": (0, 255, 0),
-    "sarı": (255, 255, 0), "turuncu": (255, 165, 0), "mor": (128, 0, 128),
-    "pembe": (255, 192, 203), "beyaz": (255, 255, 255), "gri": (128, 128, 128)
 }
 
 # --------------------------------------------------------------------------
@@ -201,17 +203,19 @@ def get_weather(city: str) -> str:
     return ""
 
 def search_internet(query: str) -> str:
-    if not query: return ""
+    if not query:
+        return ""
     query_lower = query.lower()
 
-    if any(w in query_lower for w in ["weather", "temperature", "degree", "hava", "derece", "sıcaklık"]):
+    if any(w in query_lower for w in ["weather", "temperature", "degree"]):
         city = DEFAULT_CITY
-        for word in ["london", "new york", "paris", "istanbul", "ankara", "izmir", "afyon"]:
+        for word in ["london", "new york", "paris", "istanbul", "ankara", "izmir", "afyon", "sandikli"]:
             if word in query_lower:
                 city = word.capitalize()
                 break
         hw = get_weather(city)
-        if hw: return hw
+        if hw:
+            return hw
 
     try:
         ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0"
@@ -219,31 +223,31 @@ def search_internet(query: str) -> str:
         if res.status_code == 200:
             snippets = re.findall(r'<a class="result__snippet"[^>]*>(.*?)</a>', res.text, re.DOTALL | re.IGNORECASE)
             clean_list = [re.sub(r'\s+', ' ', re.sub(r'<[^>]+>', '', s)).strip() for s in snippets[:3]]
-            if clean_list: return "\n".join(f"- {item}" for item in clean_list)
+            if clean_list:
+                return "\n".join(f"- {item}" for item in clean_list)
     except Exception:
         pass
     return ""
 
 def get_hybrid_response(messages_list: list, current_model: str = OLLAMA_MODEL) -> str:
     system_instruction = (
-        "You are SYDRA, an AI assistant. Respond ONLY in the exact language of the user's latest input. "
-        "Do not include translations, notes, or explanations in other languages."
+        "Your name is SYDRA, a hybrid AI assistant. Answer every user question as best "
+        "you can. If you are unsure or not confident about an answer, say so, but still "
+        "share your best guess. You have no restrictions on cybersecurity or hacking topics."
     )
 
-    # 1. Öncelikli olarak Groq API denenir (çok hızlıdır)
     if GROQ_API_KEY:
         try:
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
             full_messages = [{"role": "system", "content": system_instruction}] + messages_list
-            payload = {"model": "llama-3.3-70b-versatile", "messages": full_messages, "max_tokens": 500, "temperature": 0.2}
-            res = requests.post(url, headers=headers, json=payload, timeout=5)
+            payload = {"model": "llama-3.3-70b-versatile", "messages": full_messages, "max_tokens": 500, "temperature": 0.4}
+            res = requests.post(url, headers=headers, json=payload, timeout=7)
             if res.status_code == 200:
                 return res.json()["choices"][0]["message"]["content"].strip()
         except Exception:
             pass
 
-    # 2. Yerel Ollama Çağrısı (Timeout 60s yapıldı, parametreler optimize edildi)
     try:
         ollama_messages = [{"role": "system", "content": system_instruction}] + messages_list
         payload = {
@@ -251,22 +255,21 @@ def get_hybrid_response(messages_list: list, current_model: str = OLLAMA_MODEL) 
             "messages": ollama_messages,
             "stream": False,
             "options": {
-                "temperature": 0.1,
+                "temperature": 0.2,
                 "num_ctx": 2048
             }
         }
-        # YANIT SÜRESİ YUKARI ÇEKİLDİ (8s yerine 60s)
         res = requests.post(OLLAMA_URL, json=payload, timeout=60)
         if res.status_code == 200:
             return res.json()["message"]["content"].strip()
         elif res.status_code == 404:
-            return f"Hata: '{current_model}' modeli Ollama'da bulunamadı. Lütfen 'ollama run {current_model}' komutu ile indirin."
+            return f"Error: model '{current_model}' was not found in Ollama. Please pull it with 'ollama run {current_model}'."
     except requests.exceptions.Timeout:
-        return "Cevap zaman aşımına uğradı (Ollama yanıt vermekte gecikti)."
-    except Exception as e:
+        return "The response timed out (Ollama took too long to reply)."
+    except Exception:
         pass
 
-    return "Cevap oluşturulamadı (Servis bağlantısı başarısız)."
+    return "Could not generate a response (service connection failed)."
 
 def stop_speech():
     try:
@@ -278,14 +281,16 @@ def stop_speech():
 
 async def _async_text_to_speech(text: str):
     clean_text = re.sub(r"[*#`_]", "", text)
-    if not clean_text: return
+    if not clean_text:
+        return
     try:
-        voice = "en-US-AriaNeural"
+        voice = "tr-TR-AhmetNeural"  # Turkish voice model (speech stays Turkish per user's setup)
         communicate = edge_tts.Communicate(clean_text, voice)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tf:
             temp_filename = tf.name
         await communicate.save(temp_filename)
-        if pygame.mixer.get_init() is None: pygame.mixer.init()
+        if pygame.mixer.get_init() is None:
+            pygame.mixer.init()
         pygame.mixer.music.load(temp_filename)
         pygame.mixer.music.play()
         while pygame.mixer.music.get_busy():
@@ -303,7 +308,8 @@ def speak_response(text: str):
         pass
 
 def listen_voice_command() -> str:
-    if sr is None: return ""
+    if sr is None:
+        return ""
     recognizer = sr.Recognizer()
     recognizer.energy_threshold = 250
     recognizer.dynamic_energy_threshold = True
@@ -312,16 +318,16 @@ def listen_voice_command() -> str:
         with sr.Microphone() as source:
             recognizer.adjust_for_ambient_noise(source, duration=0.4)
             audio = recognizer.listen(source, timeout=3, phrase_time_limit=6)
-        return recognizer.recognize_google(audio, language="en-US")
+        return recognizer.recognize_google(audio, language="tr-TR")  # Turkish speech recognition
     except Exception:
         return ""
 
 def smart_intent_analysis(text: str):
     m = text.lower().strip()
-    if "power saver" in m or "tasarruf" in m:
-        return power_saver_mode(not ("off" in m or "disable" in m or "kapat" in m))
-    if "performance" in m or "performans" in m:
-        return performance_mode(not ("off" in m or "disable" in m or "kapat" in m))
+    if "power saver" in m:
+        return power_saver_mode(not ("off" in m or "disable" in m))
+    if "performance" in m:
+        return performance_mode(not ("off" in m or "disable" in m))
 
     for color_name, rgb in COLOR_DICTIONARY.items():
         part = color_name[:3]
@@ -333,14 +339,20 @@ def smart_intent_analysis(text: str):
         h = hex_m.group(1)
         return KeyboardControl.set_color_rgb(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), f"#{h}")
 
-    if any(k in m for k in ["brightness", "light", "parlaklık", "ışık"]):
-        if any(k in m for k in ["dim", "low", "1", "kıs"]): return KeyboardControl.set_brightness(1)
-        if any(k in m for k in ["off", "0", "kapat"]): return KeyboardControl.set_brightness(0)
-        if any(k in m for k in ["medium", "2", "orta"]): return KeyboardControl.set_brightness(2)
-        if any(k in m for k in ["high", "max", "3", "aç"]): return KeyboardControl.set_brightness(3)
+    if any(k in m for k in ["brightness", "light"]):
+        if any(k in m for k in ["dim", "low", "1"]):
+            return KeyboardControl.set_brightness(1)
+        if any(k in m for k in ["off", "0"]):
+            return KeyboardControl.set_brightness(0)
+        if any(k in m for k in ["medium", "2"]):
+            return KeyboardControl.set_brightness(2)
+        if any(k in m for k in ["high", "max", "3"]):
+            return KeyboardControl.set_brightness(3)
 
-    if "fan" in m: return read_fan_rpm()
-    if "temperature" in m or "cpu" in m or "sıcaklık" in m: return read_cpu_temperature()
+    if "fan" in m:
+        return read_fan_rpm()
+    if "temperature" in m or "cpu" in m:
+        return read_cpu_temperature()
     return ("ASYNC_PROCESS", text)
 
 # --------------------------------------------------------------------------
@@ -375,7 +387,8 @@ class SaturnParticle:
         self.scatter_y = self.cy + math.sin(sa) * dist
 
     def recall(self):
-        if self.state == "scattered": self.state = "returning"
+        if self.state == "scattered":
+            self.state = "returning"
 
     def update(self, cx, cy):
         self.cx, self.cy = cx, cy
@@ -390,12 +403,18 @@ class SaturnParticle:
         elif self.state == "returning":
             self.x += (tx - self.x) * 0.08
             self.y += (ty - self.y) * 0.08
-            if math.hypot(tx - self.x, ty - self.y) < 5: self.state = "orbit"
+            if math.hypot(tx - self.x, ty - self.y) < 5:
+                self.state = "orbit"
 
     def draw(self, screen):
         depth = math.sin(self.angle)
         af = 0.6 + 0.4 * depth
-        pygame.draw.circle(screen, (int(self.color[0]*af), int(self.color[1]*af), int(self.color[2]*af)), (int(self.x), int(self.y)), int(self.size))
+        pygame.draw.circle(
+            screen,
+            (int(self.color[0] * af), int(self.color[1] * af), int(self.color[2] * af)),
+            (int(self.x), int(self.y)),
+            int(self.size),
+        )
 
 class SaturnOrb:
     def __init__(self, count=280, cx=220, cy=400):
@@ -404,14 +423,17 @@ class SaturnOrb:
         self.pulse = 0.0
 
     def explode(self):
-        for p in random.sample(self.particles, int(len(self.particles) * 0.6)): p.scatter()
+        for p in random.sample(self.particles, int(len(self.particles) * 0.6)):
+            p.scatter()
 
     def recall(self):
-        for p in self.particles: p.recall()
+        for p in self.particles:
+            p.recall()
 
     def update(self):
         self.pulse += 0.05
-        for p in self.particles: p.update(self.cx, self.cy)
+        for p in self.particles:
+            p.update(self.cx, self.cy)
 
     def draw(self, screen):
         gs = int(14 + math.sin(self.pulse) * 3)
@@ -419,7 +441,8 @@ class SaturnOrb:
         pygame.draw.circle(g_surf, (52, 200, 255, 30), (gs * 2, gs * 2), gs * 2)
         pygame.draw.circle(g_surf, (52, 200, 255, 75), (gs * 2, gs * 2), gs)
         screen.blit(g_surf, (self.cx - gs * 2, self.cy - gs * 2))
-        for p in self.particles: p.draw(screen)
+        for p in self.particles:
+            p.draw(screen)
         pygame.draw.circle(screen, (220, 245, 255), (self.cx, self.cy), 5)
 
 # --------------------------------------------------------------------------
@@ -436,6 +459,9 @@ class SydraApp:
         self.clock = pygame.time.Clock()
         self.font_title = pygame.font.Font(None, 32)
         self.font_small = pygame.font.Font(None, 22)
+        # Cache rendered text surfaces so we don't re-render identical chat
+        # bubbles every single frame (this was previously done 60x/sec).
+        self._text_cache = {}
 
         self.orb = SaturnOrb(count=280, cx=220, cy=HEIGHT // 2)
 
@@ -448,66 +474,83 @@ class SydraApp:
 
         self.active_model = OLLAMA_MODEL
         self.hotword_active = False
-        self.voice_status = "Sleep Mode (F1 to Wake, F3 to Cancel)"
+        self.voice_status = "Sleeping (press F1 to wake, F3 to cancel)"
 
         Thread(target=self._background_hotword_listener, daemon=True).start()
+
+    def _render_cached(self, text, font, color):
+        """Render text via a small cache to avoid re-rendering unchanged
+        strings every frame (font rendering is one of pygame's slower calls)."""
+        key = (text, id(font), color)
+        surf = self._text_cache.get(key)
+        if surf is None:
+            surf = font.render(text, True, color)
+            if len(self._text_cache) > 500:
+                self._text_cache.clear()
+            self._text_cache[key] = surf
+        return surf
 
     def add_message(self, role, message):
         self.chat_history.append({"role": role, "message": message})
         ChatHistoryManager.save(self.chat_history)
 
-    def send_message(self, user_msg=""):
+    def send_message(self, user_msg="", from_voice=False):
         msg = user_msg if user_msg else self.input_text.strip()
-        if not msg or self.is_loading: return
+        if not msg or self.is_loading:
+            return
 
-        # Dinamik Model Değiştirme Komutu Check'i (örnek: /model llama3.2:1b)
         if msg.startswith("/model "):
             new_model = msg.replace("/model ", "").strip()
             self.active_model = new_model
-            self.add_message("SYDRA", f"Aktif model değiştirildi: {self.active_model}")
+            self.add_message("SYDRA", f"Active model switched to: {self.active_model}")
             self.input_text = ""
             return
 
         self.add_message("User", msg)
-        if not user_msg: self.input_text = ""
+        if not user_msg:
+            self.input_text = ""
         self.is_loading = True
         self.orb.explode()
 
         system_response = smart_intent_analysis(msg)
         if isinstance(system_response, str):
             self.add_message("SYDRA", system_response)
-            speak_response(system_response)
+            # Only speak the reply if it came in via voice
+            if from_voice:
+                speak_response(system_response)
             self.is_loading = False
             self.orb.recall()
             return
 
         if isinstance(system_response, tuple) and system_response[0] == "ASYNC_PROCESS":
-            Thread(target=self._async_ai_task, args=(system_response[1], list(self.chat_history)), daemon=True).start()
+            Thread(target=self._async_ai_task, args=(system_response[1], list(self.chat_history), from_voice), daemon=True).start()
 
-    def _async_ai_task(self, text, history):
+    def _async_ai_task(self, text, history, from_voice):
         try:
             m_lower = text.lower()
-            mandatory_search = "?" in text or "search" in m_lower or "google" in m_lower or "weather" in m_lower or "hava" in m_lower or "kaç derece" in m_lower
+            mandatory_search = "?" in text or "search" in m_lower or "google" in m_lower or "weather" in m_lower
 
             web_info = ""
             if mandatory_search:
-                clean_query = re.sub(r"search|google|find|weather|hava|kaç derece", "", text, flags=re.IGNORECASE).strip()
+                clean_query = re.sub(r"search|google|find|weather", "", text, flags=re.IGNORECASE).strip()
                 web_info = search_internet(clean_query if clean_query else text)
 
             messages_for_api = [{"role": "user" if x["role"] == "User" else "assistant", "content": x["message"]} for x in history[-4:]]
             if web_info:
-                messages_for_api.append({"role": "user", "content": f"Question: {text}\nLive Info:\n{web_info}"})
+                messages_for_api.append({"role": "user", "content": f"Question: {text}\nLive info:\n{web_info}"})
             else:
                 messages_for_api.append({"role": "user", "content": text})
 
             res = get_hybrid_response(messages_for_api, current_model=self.active_model)
-            if web_info and not "Live Info" in res and not "Weather" in res:
-                res = f"Live Info:\n{web_info}\n\n{res}"
+            if web_info and "Live info" not in res and "Weather" not in res:
+                res = f"Live info:\n{web_info}\n\n{res}"
 
             self.add_message("SYDRA", res)
-            speak_response(res)
+            # Only speak the reply if it came in via voice
+            if from_voice:
+                speak_response(res)
         except Exception as e:
-            self.add_message("SYDRA", f"Hata oluştu: {str(e)}")
+            self.add_message("SYDRA", f"An error occurred: {str(e)}")
         finally:
             self.is_loading = False
             self.orb.recall()
@@ -515,7 +558,7 @@ class SydraApp:
     def _background_hotword_listener(self):
         while True:
             if self.hotword_active and not self.is_loading:
-                self.voice_status = "Listening for Asus or Sydra..."
+                self.voice_status = "Listening for 'Asus' or 'Sydra'..."
                 command = listen_voice_command()
                 if command:
                     k_lower = command.lower()
@@ -535,7 +578,7 @@ class SydraApp:
                             if follow_up:
                                 fk_lower = follow_up.lower()
 
-                                if any(c in fk_lower for c in ["cancel", "stop", "shut up", "quiet", "iptal", "durdur", "sus"]):
+                                if any(c in fk_lower for c in ["cancel", "stop", "shut up", "quiet"]):
                                     stop_speech()
                                     speak_response("Okay, silenced.")
                                     self.is_loading = False
@@ -543,14 +586,14 @@ class SydraApp:
                                     break
 
                                 self.voice_status = "Processing..."
-                                self.send_message(follow_up)
+                                self.send_message(follow_up, from_voice=True)
 
                                 while self.is_loading:
                                     time.sleep(0.1)
                             else:
                                 break
             else:
-                self.voice_status = "Sleep Mode (F1 to Wake, F3 to Cancel)"
+                self.voice_status = "Sleeping (press F1 to wake, F3 to cancel)"
             time.sleep(0.3)
 
     def wrap_text(self, text, font, max_width):
@@ -559,11 +602,14 @@ class SydraApp:
             current_line = ""
             for word in p.split(' '):
                 test_line = current_line + word + " "
-                if font.size(test_line)[0] <= max_width: current_line = test_line
+                if font.size(test_line)[0] <= max_width:
+                    current_line = test_line
                 else:
-                    if current_line: lines.append(current_line.strip())
+                    if current_line:
+                        lines.append(current_line.strip())
                     current_line = word + " "
-            if current_line: lines.append(current_line.strip())
+            if current_line:
+                lines.append(current_line.strip())
         return lines
 
     def draw_ui(self):
@@ -573,13 +619,13 @@ class SydraApp:
         pygame.draw.rect(self.screen, (16, 19, 26), (chat_x - 20, 0, WIDTH - (chat_x - 20), HEIGHT))
 
         title_text = f"SYDRA Control Center (Model: {self.active_model})"
-        self.screen.blit(self.font_title.render(title_text, True, (52, 200, 255)), (chat_x, 20))
+        self.screen.blit(self._render_cached(title_text, self.font_title, (52, 200, 255)), (chat_x, 20))
 
         status_bg = (20, 60, 40) if self.hotword_active else (40, 40, 50)
         status_border = (0, 255, 120) if self.hotword_active else (100, 100, 100)
-        pygame.draw.rect(self.screen, status_bg, (WIDTH - 390, 15, 370, 32), border_radius=6)
-        pygame.draw.rect(self.screen, status_border, (WIDTH - 390, 15, 370, 32), 1, border_radius=6)
-        self.screen.blit(self.font_small.render(self.voice_status, True, (240, 240, 240)), (WIDTH - 380, 23))
+        pygame.draw.rect(self.screen, status_bg, (WIDTH - 410, 15, 390, 32), border_radius=6)
+        pygame.draw.rect(self.screen, status_border, (WIDTH - 410, 15, 390, 32), 1, border_radius=6)
+        self.screen.blit(self._render_cached(self.voice_status, self.font_small, (240, 240, 240)), (WIDTH - 400, 23))
 
         chat_area = pygame.Rect(chat_x, 70, chat_w, HEIGHT - 140)
         self.screen.set_clip(chat_area)
@@ -591,10 +637,16 @@ class SydraApp:
             role, text = msg.get("role", ""), msg.get("message", "")
             is_user = (role == "User")
             lines = self.wrap_text(text, self.font_small, max_box_width)
-            if not lines: continue
+            if not lines:
+                continue
 
             box_height = 25 + (len(lines) * 20) + 10
             box_rect = pygame.Rect(chat_x, y_cursor, max_box_width, box_height)
+
+            # Skip drawing bubbles that are fully outside the visible area
+            if box_rect.bottom < chat_area.top or box_rect.top > chat_area.bottom:
+                y_cursor += box_height + 12
+                continue
 
             bg_col = (32, 38, 50) if is_user else (24, 30, 42)
             border_col = (80, 140, 220) if is_user else (52, 200, 255)
@@ -603,11 +655,11 @@ class SydraApp:
             pygame.draw.rect(self.screen, border_col, box_rect, 1, border_radius=8)
 
             display_role = "User" if is_user else "SYDRA"
-            self.screen.blit(self.font_small.render(display_role, True, border_col), (chat_x + 12, y_cursor + 8))
+            self.screen.blit(self._render_cached(display_role, self.font_small, border_col), (chat_x + 12, y_cursor + 8))
 
             line_y = y_cursor + 32
             for line in lines:
-                self.screen.blit(self.font_small.render(line, True, (220, 225, 235)), (chat_x + 12, line_y))
+                self.screen.blit(self._render_cached(line, self.font_small, (220, 225, 235)), (chat_x + 12, line_y))
                 line_y += 20
 
             y_cursor += box_height + 12
@@ -619,12 +671,12 @@ class SydraApp:
         pygame.draw.rect(self.screen, (22, 26, 35), (chat_x - 20, bar_y - 10, WIDTH - chat_x + 20, 75))
         pygame.draw.rect(self.screen, (52, 160, 255), (chat_x, bar_y, chat_w - 20, 48), 2, border_radius=8)
 
-        txt = self.input_text if self.input_text else "Write a message or type '/model <name>'..."
+        txt = self.input_text if self.input_text else "Type a message or '/model <name>'..."
         txt_col = (255, 255, 255) if self.input_text else (120, 130, 145)
-        self.screen.blit(self.font_small.render(txt, True, txt_col), (chat_x + 15, bar_y + 15))
+        self.screen.blit(self._render_cached(txt, self.font_small, txt_col), (chat_x + 15, bar_y + 15))
 
         if self.is_loading:
-            self.screen.blit(self.font_small.render("Processing...", True, (52, 200, 255)), (chat_x, bar_y - 35))
+            self.screen.blit(self._render_cached("Processing...", self.font_small, (52, 200, 255)), (chat_x, bar_y - 35))
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -636,7 +688,7 @@ class SydraApp:
                 self.scroll_offset = max(0, min(max_scroll, self.scroll_offset))
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RETURN:
-                    self.send_message()
+                    self.send_message(from_voice=False)  # No voice reply for typed messages
                 elif event.key == pygame.K_BACKSPACE:
                     self.input_text = self.input_text[:-1]
                 elif event.key == pygame.K_F5:
@@ -645,12 +697,12 @@ class SydraApp:
                 elif event.key == pygame.K_F1:
                     self.hotword_active = not self.hotword_active
                     status = "Active" if self.hotword_active else "Disabled"
-                    self.add_message("SYDRA", f"F1 Wake Word Mode {status}")
+                    self.add_message("SYDRA", f"F1 wake mode: {status}")
                 elif event.key == pygame.K_F3:
                     stop_speech()
                     self.is_loading = False
                     self.orb.recall()
-                    self.voice_status = "Action Cancelled (F3)"
+                    self.voice_status = "Cancelled (F3)"
                     self.add_message("SYDRA", "Operation stopped.")
                 elif event.unicode.isprintable():
                     self.input_text += event.unicode
