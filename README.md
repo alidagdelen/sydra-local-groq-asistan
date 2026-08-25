@@ -1,3 +1,6 @@
+It is a significant, original model, though its version is somewhat limited; it provides basic answers. Since its native language is Turkish, it may occasionally produce glitchy responses in English. However, if you have an internet connection and a Groq key, you can retrieve up-to-date data by adding a "?" to the end of your question. The Groq key is currently completely free and can be obtained from the website.
+
+
 # 🤖 SYDRA — Smart Control Center
 
 SYDRA is a fullscreen desktop AI assistant built with `pygame`, featuring a live animated "Saturn" particle orb visualizer, a interactive chat interface, English voice input/output (via `SpeechRecognition` + `edge-tts`), multilingual text response capabilities, real-time web search capabilities, and hardware controls tailored for ASUS laptops on Linux (keyboard RGB, brightness, fan speed, CPU temperature, power profiles).
