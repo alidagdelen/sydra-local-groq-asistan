@@ -40,12 +40,13 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/chat")
 # Lightweight but capable default model, good for fast responses on an RTX 4050:
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:1.5b")
-DEFAULT_CITY = os.getenv("SYDRA_DEFAULT_CITY", "Afyonkarahisar")
+DEFAULT_CITY = os.getenv("SYDRA_DEFAULT_CITY", "Istanbul")
 HISTORY_FILE = "chat_history.json"
 
 # --------------------------------------------------------------------------
 # 0. CHAT HISTORY MANAGER
 # --------------------------------------------------------------------------
+# Persists chat messages to a local JSON file so history survives restarts.
 class ChatHistoryManager:
     @staticmethod
     def load():
@@ -284,7 +285,8 @@ async def _async_text_to_speech(text: str):
     if not clean_text:
         return
     try:
-        voice = "tr-TR-AhmetNeural"  # Turkish voice model (speech stays Turkish per user's setup)
+        voice = "en-US-GuyNeural"  # English voice model
+        # voice = "tr-TR-AhmetNeural"
         communicate = edge_tts.Communicate(clean_text, voice)
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tf:
             temp_filename = tf.name
@@ -318,7 +320,8 @@ def listen_voice_command() -> str:
         with sr.Microphone() as source:
             recognizer.adjust_for_ambient_noise(source, duration=0.4)
             audio = recognizer.listen(source, timeout=3, phrase_time_limit=6)
-        return recognizer.recognize_google(audio, language="tr-TR")  # Turkish speech recognition
+        return recognizer.recognize_google(audio, language="en-US")  # English speech recognition
+        # return recognizer.recognize_google(audio, language="tr-TR")
     except Exception:
         return ""
 
