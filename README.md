@@ -1,4 +1,4 @@
-cat << 'EOF' > README.md
+
 # SYDRA — System Dynamic Reasoning Assistant
 
 ![SYDRA Interface](screenshots/main.png)
